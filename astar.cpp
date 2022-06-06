@@ -78,10 +78,10 @@ Path aStarSearch(const Graph &graph, const Vertex &start, const Vertex &goal) {
       if (visited[edge.End])
         continue;
 
-      AstarInternal newPath {minPath};
+      AstarInternal newPath{minPath};
       newPath.path.push_back(edge);
       newPath.cost += edge.Cost + heuristicCost[graph[edge.End]] -
-                               heuristicCost[currVertex];
+                      heuristicCost[currVertex];
       pathTable.push_back(newPath);
     }
     std::remove_if(pathTable.begin(), pathTable.end(),

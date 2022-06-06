@@ -1,95 +1,36 @@
-#include "utility.h"
-#include <algorithm>
 #include <iostream>
-#include <queue>
-#include <unordered_set>
+#include <vector>
 
-Graph initGraph() {
-  Vertex S{"S"};
-  Vertex A{"A"};
-  Vertex B{"B"};
-  Vertex C{"C"};
-  Vertex D{"D"};
-  Vertex G{"G"};
+constexpr uint32_t VERTCOUNT = 6;
+enum Vertex { S, A, B, C, D, G };
 
-  Graph graph;
-  graph.addEdge(S, A, 2)
-      .addEdge(S, B, 3)
-      .addEdge(A, C, 2)
-      .addEdge(A, B, 3)
-      .addEdge(A, D, 1)
-      .addEdge(B, D, 4)
-      .addEdge(C, D, 4)
-      .addEdge(C, G, 3)
-      .addEdge(D, G, 2);
+int  graph[VERTCOUNT][VERTCOUNT] =  {
+  { 0, 2, 3, 0, 0, 0 },
+  { 2, 0, 3, 2, 1, 0 },
+  { 3, 3, 0, 0, 4, 0 },
+  { 0, 2, 0, 0, 4, 3 },
+  { 0, 1, 4, 4, 0, 2 },
+  { 0, 0, 0, 3, 2, 0 }
+};
 
-  return graph;
+std::vector<Vertex> edgesOf(Vertex vertex) {
+  int *list = graph[vertex];
+  std::vector<Vertex> result;
+
+  for (uint32_t i = 0; i < VERTCOUNT; ++i) {
+    if (list[i])
+      result.push_back((Vertex)i);
+  }
+  return result;
 }
 
 
-std::vector<Edge> bfs(const Graph &graph, const Vertex &start, const Vertex &goal) {
-  std::vector<bool> visited(graph.totalVertex(), false);
-  std::queue<Edge> toVisit;
-  std::vector<Edge> tracePath;
-
-  auto pathCompare = [](const Edge &lhs, const Edge &rhs) {
-    return lhs.Cost < rhs.Cost;
-  };
-
-  auto hasVisited = [&visited](const VertexIndex &index) {
-    return visited[index];
-  };
-
-  visited[graph[start]] = true;
-  auto edges = graph.edgeStartVertex(start);
-  std::sort(edges.begin(), edges.end(), pathCompare);
-  for (auto &edge : edges) {
-    toVisit.push(edge);
-  }
-
-  while (!toVisit.empty()) {
-    // get current edge, skip if already visited
-    auto currEdge = toVisit.front();
-    toVisit.pop();
-    if (hasVisited(currEdge.End)) {
-      continue;
-    }
-    // add current edge to tracePath
-    // and mark current edge as visited
-    tracePath.push_back(currEdge);
-    visited[currEdge.End] = true;
-
-    // stop if goal reached
-    if (graph[currEdge.End] == goal) {
-      break;
-    }
-
-    // get the edges that start from the end of current edge
-    // and add them if not already visited
-    edges = graph.edgeStartVertex(graph[currEdge.End]);
-    std::sort(edges.begin(), edges.end(), pathCompare);
-    for (auto edge : edges) {
-      if (!hasVisited(edge.End))
-        toVisit.push(edge);
-    }
-  }
-  return tracePath;
-}
 
 int main() {
-  Graph graph = initGraph();
-  Vertex start{"S"}, goal{"G"};
-  auto tracePath = bfs(graph, start, goal);
-  displayPath(graph, tracePath, "Trace Path:");
-  std::cout << std::endl;
-
-  auto actualPath = ComputeActualPath(tracePath);
-  PathCost total = 0;
-  for (auto &edge : actualPath) {
-    total += edge.Cost;
-  }
-  displayPath(graph, actualPath, "Actual Path:");
-  std::cout << "Actual Path Cost: " << total << std::endl;
+  auto edges = edgesOf(S);
+  for (auto e : edges) 
+    std::cout << e << " ";
+  std::cout << std::endl; 
 
   return EXIT_SUCCESS;
 }

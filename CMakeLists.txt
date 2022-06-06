@@ -5,13 +5,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED 20)
 # add library
 add_subdirectory(utility)
 
+# make production
+add_executable(production)
+target_sources(production
+  PRIVATE production.cpp
+)
+
 #  make bfs
 add_executable(bfs)
 target_sources(bfs
   PRIVATE bfs.cpp
-)
-target_link_libraries(bfs
-  PRIVATE utility
 )
 
 # make greedy
