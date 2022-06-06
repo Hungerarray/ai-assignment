@@ -1,113 +1,99 @@
-#include "utility.h"
-#include <algorithm>
 #include <iostream>
-#include <unordered_map>
+#include <algorithm>
+#include <deque>
+#include <array>
 
-using Path = std::vector<Edge>;
-
-Vertex S{"S"};
-Vertex A{"A"};
-Vertex B{"B"};
-Vertex C{"C"};
-Vertex D{"D"};
-Vertex G{"G"};
-
-std::unordered_map<Vertex, uint32_t> heuristicCost{{S, 8}, {A, 5}, {B, 6},
-                                                   {C, 3}, {D, 2}, {G, 0}};
-
-Graph initGraph() {
-  Graph graph;
-  graph.addEdge(S, A, 2)
-      .addEdge(S, B, 3)
-      .addEdge(A, C, 2)
-      .addEdge(A, B, 3)
-      .addEdge(A, D, 1)
-      .addEdge(B, D, 4)
-      .addEdge(C, D, 4)
-      .addEdge(C, G, 3)
-      .addEdge(D, G, 2);
-
-  return graph;
+constexpr uint32_t VERTCOUNT = 7;
+enum Vertex { S, A, B, C, D, H, G };
+char VertexName(Vertex v) {
+  switch(v) {
+    case S:
+      return 'S';
+    case A:
+      return 'A';
+    case B:
+      return 'B';
+    case C:
+      return 'C';
+    case D:
+      return 'D';
+    case H:
+      return 'H';
+    case G:
+      return 'G';
+    default:
+      return '-';
+  }
 }
 
-struct AstarInternal {
-  Path path;
+struct Path {
+  std::deque<Vertex> path;
   uint64_t cost;
-
-  AstarInternal(Path p, uint64_t c) : path{p}, cost{c} {}
-  AstarInternal(const AstarInternal &other)
-      : path{other.path}, cost{other.cost} {}
 };
 
-Path aStarSearch(const Graph &graph, const Vertex &start, const Vertex &goal) {
-  std::vector<bool> visited(graph.totalVertex(), false);
-  std::vector<AstarInternal> pathTable;
-  Vertex curr = start;
-  visited[graph[start]] = true;
+int  graph[VERTCOUNT][VERTCOUNT] {
+  { 0, 2, 3, 0, 0, 0, 0 },
+  { 2, 0, 3, 2, 1, 0, 0 },
+  { 3, 3, 0, 0, 4, 0, 0 },
+  { 0, 2, 0, 0, 3, 2, 0 },
+  { 0, 1, 4, 3, 0, 0, 2 },
+  { 0, 0, 0, 2, 0, 0, 0 },
+  { 0, 0, 0, 0, 2, 0, 0 }
+};
 
-  auto finished = [&visited]() {
-    return std::all_of(visited.begin(), visited.end(),
-                       [](bool value) { return value; });
-  };
+int heuristic[VERTCOUNT] { 8, 5, 6, 4, 2, 3, 0 };
 
-  auto pathCompare = [](const AstarInternal &lhs, const AstarInternal &rhs) {
-    return lhs.cost < rhs.cost;
-  };
+std::deque<Vertex> edgesOf(Vertex vertex) {
+  int *list = graph[vertex];
+  std::deque<Vertex> result;
 
-  // seeding with inital paths
-  std::vector<Edge> edges = graph.edgeStartVertex(curr);
-  for (auto edge : edges) {
-    pathTable.emplace_back(Path{edge},
-                           edge.Cost + heuristicCost[graph[edge.End]]);
+  for (uint32_t i = 0; i < VERTCOUNT; ++i) {
+    if (list[i])
+      result.push_back((Vertex)i);
   }
+  return result;
+}
 
-  while (!finished()) {
-    auto minPath =
-        *std::min_element(pathTable.begin(), pathTable.end(), pathCompare);
+Path astar(Vertex start, Vertex end) {
+  std::deque<Path> possiblePaths { Path{{S}, 0} };
+  std::array<bool, VERTCOUNT> visited {};
 
-    auto &currIndex = minPath.path.rbegin()->End;
-    auto &currVertex = graph[currIndex];
-    visited[currIndex] = true;
+  Path currPath;
+  do {
+    currPath = std::move(possiblePaths.front());
+    possiblePaths.pop_front();
+    auto &endVertex = currPath.path.back();
+    if (visited[endVertex])
+      continue;
+    visited[endVertex] = true;
 
-    if (currVertex == goal) {
-      return minPath.path;
-    }
+    auto edges = edgesOf(endVertex);
+    std::sort(edges.begin(), edges.end(), [&endVertex](Vertex lhs, Vertex rhs){
+      return graph[endVertex][lhs] < graph[endVertex][rhs];
+    });
 
-    std::vector<Edge> edges = graph.edgeStartVertex(currVertex);
-    for (auto edge : edges) {
-      if (visited[edge.End])
+    for (auto v : edges) {
+      if (visited[v])
         continue;
 
-      AstarInternal newPath{minPath};
-      newPath.path.push_back(edge);
-      newPath.cost += edge.Cost + heuristicCost[graph[edge.End]] -
-                      heuristicCost[currVertex];
-      pathTable.push_back(newPath);
-    }
-    std::remove_if(pathTable.begin(), pathTable.end(),
-                   [&visited](const AstarInternal &obj) {
-                     return visited[obj.path.rbegin()->End];
-                   });
-  }
+      Path newPath = currPath;
+      newPath.path.push_back(v);
+      newPath.cost += graph[endVertex][v];
 
-  VertexIndex goalIndex = graph[goal];
-  auto possible = std::find_if(pathTable.begin(), pathTable.end(),
-                               [goalIndex](const AstarInternal &obj) {
-                                 return obj.path.rbegin()->End == goalIndex;
-                               });
-  return possible->path;
+      possiblePaths.push_back(newPath);
+    }
+  } while(currPath.path.back() != G);
+
+  return currPath;
 }
 
 int main() {
-  Graph graph = initGraph();
-  auto tracePath = aStarSearch(graph, S, G);
-
-  displayPath(graph, tracePath, "Trace Path:");
-  uint64_t total = 0;
-  for (auto edge : tracePath) {
-    total += edge.Cost;
-  }
-  std::cout << "Path Cost: " << total << std::endl;
+  Path taken = astar(S, G);
+  std::cout << "Actual Path\n";
+  for(auto curr = taken.path.begin(); curr != taken.path.end() - 1; ++curr) 
+    std::cout << VertexName(*curr) << " -> ";
+  std::cout << VertexName(*(taken.path.end() - 1)) << "\n";
+  std::cout << "Actual Path cost: " << taken.cost << std::endl;
 
   return EXIT_SUCCESS;
 }
