@@ -17,6 +17,8 @@ char VertexName(Vertex v) {
       return 'C';
     case D:
       return 'D';
+    case H:
+      return 'H';
     case G:
       return 'G';
     default:
@@ -29,14 +31,17 @@ struct Path {
   uint64_t cost;
 };
 
-int  graph[VERTCOUNT][VERTCOUNT] =  {
-  { 0, 2, 3, 0, 0, 0 },
-  { 2, 0, 3, 2, 1, 0 },
-  { 3, 3, 0, 0, 4, 0 },
-  { 0, 2, 0, 0, 4, 3 },
-  { 0, 1, 4, 4, 0, 2 },
-  { 0, 0, 0, 3, 2, 0 }
+int  graph[VERTCOUNT][VERTCOUNT] {
+  { 0, 2, 3, 0, 0, 0, 0 },
+  { 2, 0, 3, 2, 1, 0, 0 },
+  { 3, 3, 0, 0, 4, 0, 0 },
+  { 0, 2, 0, 0, 3, 2, 0 },
+  { 0, 1, 4, 3, 0, 0, 2 },
+  { 0, 0, 0, 2, 0, 0, 0 },
+  { 0, 0, 0, 0, 2, 0, 0 }
 };
+
+int heuristic[VERTCOUNT] { 8, 5, 6, 4, 2, 3, 0 };
 
 std::deque<Vertex> edgesOf(Vertex vertex) {
   int *list = graph[vertex];
@@ -49,24 +54,21 @@ std::deque<Vertex> edgesOf(Vertex vertex) {
   return result;
 }
 
-Path bfs(Vertex start, Vertex end) {
-  std::deque<Path> possiblePaths { Path{{S}, 0} };
+Path greedy(Vertex start, Vertex end) {
   std::array<bool, VERTCOUNT> visited {};
 
-  Path currPath;
+  Path currPath {
+    { S }, 0
+  };
   do {
-    currPath = std::move(possiblePaths.front());
-    possiblePaths.pop_front();
     auto &endVertex = currPath.path.back();
     if (visited[endVertex])
       continue;
     visited[endVertex] = true;
 
     auto edges = edgesOf(endVertex);
-    std::sort(edges.begin(), edges.end(), [&endVertex](Vertex lhs, Vertex rhs){
-      return graph[endVertex][lhs] < graph[endVertex][rhs];
-    });
 
+    std::deque<Path> possiblePaths;
     for (auto v : edges) {
       if (visited[v])
         continue;
@@ -77,13 +79,16 @@ Path bfs(Vertex start, Vertex end) {
 
       possiblePaths.push_back(newPath);
     }
+    currPath = *std::min_element(possiblePaths.begin(), possiblePaths.end(), [](const Path &lhs, const Path &rhs) {
+      return heuristic[lhs.path.back()] < heuristic[rhs.path.back()];
+    });
   } while(currPath.path.back() != G);
 
   return currPath;
 }
 
 int main() {
-  Path taken = bfs(S, G);
+  Path taken = greedy(S, G);
   std::cout << "Actual Path\n";
   for(auto curr = taken.path.begin(); curr != taken.path.end() - 1; ++curr) 
     std::cout << VertexName(*curr) << " -> ";

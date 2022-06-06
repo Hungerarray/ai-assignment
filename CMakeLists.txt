@@ -22,9 +22,6 @@ add_executable(greedy)
 target_sources(greedy
   PRIVATE greedy.cpp
 )
-target_link_libraries(greedy
-  PRIVATE utility
-)
 
 # make astar
 add_executable(astar)
