@@ -41,7 +41,7 @@ int  graph[VERTCOUNT][VERTCOUNT] {
   { 0, 0, 0, 0, 2, 0, 0 }
 };
 
-int heuristic[VERTCOUNT] { 8, 5, 6, 4, 2, 3, 0 };
+uint64_t heuristic[VERTCOUNT] { 8, 5, 6, 4, 2, 3, 0 };
 
 std::deque<Vertex> edgesOf(Vertex vertex) {
   int *list = graph[vertex];
@@ -55,30 +55,29 @@ std::deque<Vertex> edgesOf(Vertex vertex) {
 }
 
 Path astar(Vertex start, Vertex end) {
-  std::deque<Path> possiblePaths { Path{{S}, 0} };
+  std::deque<Path> possiblePaths { Path{{start}, 0 + heuristic[start]} };
   std::array<bool, VERTCOUNT> visited {};
 
   Path currPath;
   do {
-    currPath = std::move(possiblePaths.front());
-    possiblePaths.pop_front();
+    auto curr = std::min_element(possiblePaths.begin(), possiblePaths.end(), [](const Path &lhs, const Path &rhs) {
+      return lhs.cost < rhs.cost;
+    });
+    currPath = *curr;
+    possiblePaths.erase(curr);
     auto &endVertex = currPath.path.back();
     if (visited[endVertex])
       continue;
     visited[endVertex] = true;
 
     auto edges = edgesOf(endVertex);
-    std::sort(edges.begin(), edges.end(), [&endVertex](Vertex lhs, Vertex rhs){
-      return graph[endVertex][lhs] < graph[endVertex][rhs];
-    });
-
     for (auto v : edges) {
       if (visited[v])
         continue;
 
       Path newPath = currPath;
       newPath.path.push_back(v);
-      newPath.cost += graph[endVertex][v];
+      newPath.cost += graph[endVertex][v] - heuristic[endVertex] + heuristic[v] ;
 
       possiblePaths.push_back(newPath);
     }

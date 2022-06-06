@@ -28,6 +28,3 @@ add_executable(astar)
 target_sources(astar
   PRIVATE astar.cpp
 )
-target_link_libraries(astar
-  PRIVATE utility
-)
